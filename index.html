@@ -4,17 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Testreszabható Mandátum Kalkulátor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQo7fECAvK4k5Z+lV0fBU8kC3J7qC5wJp0M65fRzYg/w4jBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+        /* ÁLTALÁNOS STÍLUSOK */
+        html, body {
+            height: 100%;
+            margin: 0;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            flex-direction: column; 
             background-color: #f0f2f5;
+            font-family: Arial, sans-serif;
             color: #333;
         }
 
         .container {
             max-width: 800px;
-            margin: 30px auto;
             padding: 30px;
             background-color: #fff;
             border-radius: 8px;
@@ -27,15 +33,14 @@
             margin-bottom: 30px;
         }
 
-        /* --- KORRIGÁLT GRID STRUKTÚRA --- */
+        /* GRID ÉS INPUT MEZŐK STÍLUSA (Párt neve, %, Küszöb) */
         .party-input-group, .party-header {
             display: grid;
-            /* Oszlopok: Párt neve (50%), % (25%), Küszöb (25%) */
-            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-columns: 2fr 1fr 1fr 30px; 
             gap: 15px;
             align-items: center;
         }
-
+        
         .party-input-group {
             margin-bottom: 15px;
         }
@@ -43,7 +48,7 @@
         .party-input-group input[type="text"],
         .party-input-group input[type="number"] {
             padding: 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #ccc; /* Szürke keret */
             border-radius: 4px;
             font-size: 1em;
             width: 100%;
@@ -57,108 +62,145 @@
             border-bottom: 1px solid #eee;
         }
 
-        /* Fejlécek középre igazítása (kivéve Párt/lista) */
         .party-header div:nth-child(2),
         .party-header div:nth-child(3) {
             text-align: center;
         }
-
-        /* --- VEZÉRLŐK ÉS GOMBOK --- */
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .controls button {
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 5px;
+        
+        .delete-btn {
             cursor: pointer;
-            font-size: 1em;
-            transition: background-color 0.3s ease;
+            color: #333; 
+            font-size: 1.2em;
+            text-align: center;
+            line-height: 40px; 
         }
-
-        .controls button:hover {
-            background-color: #218838;
+        .delete-btn:hover {
+            color: #000;
         }
         
-        #addPartyBtn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
+        /* VEZÉRLŐ RÉSZ KIALAKÍTÁSA */
+        .controls-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 30px; 
+            gap: 15px;
+            align-items: center;
+            margin-top: 20px;
         }
 
+        .party-add-column {
+            /* Ez a div foglalja el az első oszlopot (2fr) */
+            grid-column: 1 / span 1; 
+            /* Fontos: A gombot tegye balra (alapértelmezett) */
+            /* A CSS lentebb biztosítja, hogy a gomb megkapja a teljes szélességet, ha szükséges */
+        }
+        
+        /* GOMB STÍLUSOK (Párt hozzáadása és Számolás indítása) */
+        .controls-row button, .calculate-button-container button {
+            background-color: #fff !important; 
+            color: #333 !important; 
+            border: 1px solid #ccc !important; 
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: normal; 
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            width: auto; /* A gomb csak a tartalma szélessége legyen */
+        }
+
+        .controls-row button:hover, .calculate-button-container button:hover {
+            background-color: #eee !important; 
+            color: #333 !important;
+        }
+        
         .total-mandates-group {
+            grid-column: 2 / 5; 
             display: flex;
             align-items: center;
-            margin-left: auto;
+            justify-content: flex-end; 
         }
 
+        /* 3. ÖSSZES MANDÁTUM FELIRAT (Fekete, Bold) */
         .total-mandates-group label {
             margin-right: 10px;
-            font-weight: bold;
+            font-weight: bold; 
+            color: #000; 
+            font-size: 1em;
         }
-
+        
+        /* 4. ÖSSZES MANDÁTUM BEVITELI MEZŐ (Szürke Keret) */
         .total-mandates-group input {
             padding: 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #ccc; 
             border-radius: 4px;
             font-size: 1em;
             width: 80px;
             text-align: right;
+            box-sizing: border-box;
         }
+
 
         .calculate-button-container {
             width: 100%;
             text-align: center;
             margin-top: 30px;
         }
-        .calculate-button-container button {
-            background-color: #007bff;
+
+        /* SÖTÉT MÓD VÁLTÓ */
+        #darkModeSwitch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
         }
-        .calculate-button-container button:hover {
-            background-color: #0056b3;
+        #darkModeSwitch img {
+            width: 30px; 
+            height: 30px;
+            cursor: pointer;
         }
 
         /* Responsive adjustments */
         @media (max-width: 600px) {
-            .party-input-group, .party-header {
+            .party-input-group, .party-header, .controls-row {
                 grid-template-columns: 1fr;
             }
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .total-mandates-group {
-                margin-top: 20px;
-                margin-left: 0;
+            
+            .party-add-column, .total-mandates-group {
+                grid-column: 1 / span 1; 
                 justify-content: flex-start;
+                margin-top: 10px;
             }
         }
     </style>
 </head>
 <body>
+    
+    <a href="https://sarkadinp.github.io/mkdark.html" id="darkModeSwitch">
+        <img src="icons/dark.png" alt="Sötét mód váltása"> 
+    </a>
+    
     <div class="container">
         <h1>Testreszabható Mandátum Kalkulátor</h1>
 
         <div class="party-header">
             <div>Párt/lista</div>
-            <div style="text-align: right;">%</div>
-            <div style="text-align: right;">bejutási küszöb (%)</div>
+            <div style="text-align: center;">%</div>
+            <div style="text-align: center;">bejutási küszöb (%)</div>
+            <div></div> 
         </div>
 
         <div id="partiesContainer">
             </div>
 
-        <div class="controls">
-            <button id="addPartyBtn">Párt hozzáadása</button>
+        <div class="controls-row">
+            
+            <div class="party-add-column">
+                <button id="addPartyBtn"><i class="fa-solid fa-plus"></i> Párt hozzáadása</button>
+            </div>
+            
             <div class="total-mandates-group">
                 <label for="totalMandates">Összes mandátum:</label>
-                <input type="number" id="totalMandates" value="120" min="1">
+                <input type="number" id="totalMandates" value="" min="1">
             </div>
         </div>
 
@@ -186,38 +228,44 @@
             partyGroup.classList.add('party-input-group');
             partyGroup.dataset.partyId = partyCount;
 
-            // --- KORRIGÁLT PLACEHOLDER ÉS KÜSZÖB MEZŐ MÉRET ---
             partyGroup.innerHTML = `
                 <input type="text" class="party-name" placeholder="Párt neve" value="${partyName}">
                 <input type="number" class="party-percentage" placeholder="%" value="${percentage}" min="0">
                 <input type="number" class="party-threshold" placeholder="(0-100)" value="${threshold}" min="0">
+                <div class="delete-btn" onclick="removeParty(${partyCount})">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
             `;
             partiesContainer.appendChild(partyGroup);
-            
-            // Kijavított CSS: a .party-input-group grid-template-columns szabályozza a méretet
 
             if (partyCount >= MAX_PARTIES) {
                 addPartyBtn.disabled = true;
             }
 
-            // Input validáció hozzáadása dinamikusan
             const percentageInput = partyGroup.querySelector('.party-percentage');
             const thresholdInput = partyGroup.querySelector('.party-threshold');
             
             percentageInput.addEventListener('input', validatePercentage);
             thresholdInput.addEventListener('input', validatePositiveNumber);
         }
+        
+        window.removeParty = function(id) {
+            const elementToRemove = document.querySelector(`.party-input-group[data-party-id="${id}"]`);
+            if (elementToRemove) {
+                elementToRemove.remove();
+                partyCount--;
+                addPartyBtn.disabled = false;
+            }
+        }
 
         function validatePercentage(event) {
             let value = event.target.value;
             if (value === '') return;
             
-            // Csak egész szám
             if (!Number.isInteger(Number(value))) {
                 alert("Csak egész számokat használj!");
                 event.target.value = Math.floor(Number(value)); 
             } 
-            // Csak pozitív szám
             if (Number(value) < 0) {
                 alert("Hiba! Kérlek csak pozitív számot használj!");
                 event.target.value = ''; 
@@ -234,13 +282,11 @@
             }
         }
         
-        // --- D'HONDT MANDÁTUM KALKULÁCIÓ ---
         function calculateMandates(parties, totalMandates) {
             
             let passedParties = [];
             let totalPassedPercentage = 0;
 
-            // 1. Bejutási Küszöb Szűrés
             parties.forEach(party => {
                 if (party.percentage >= party.threshold) {
                     passedParties.push(party);
@@ -252,21 +298,17 @@
                 return "Egyetlen párt sem érte el a bejutási küszöböt. Nincs kiosztandó mandátum.";
             }
 
-            // Normalizált százalékok kiszámítása:
             passedParties = passedParties.map(party => ({
                 name: party.name,
-                // Normalizált szavazatarány
                 normalizedPercentage: (party.percentage / totalPassedPercentage) * 100,
                 mandates: 0
             }));
 
-            // 2. D'Hondt Módszer
             for (let i = 0; i < totalMandates; i++) {
                 let maxQuotient = -1;
                 let winningPartyIndex = -1;
 
                 passedParties.forEach((party, index) => {
-                    // D'Hondt képlet: Kvóciens = Normalizált Szavazatok / (Kiosztott mandátumok + 1)
                     const quotient = party.normalizedPercentage / (party.mandates + 1);
                     
                     if (quotient > maxQuotient) {
@@ -280,7 +322,6 @@
                 }
             }
             
-            // 3. Eredmény formázása
             let resultText = `✅ Sikeres mandátumelosztás (D'Hondt-módszer):\n\n`;
             let totalSeatsAssigned = 0;
             
@@ -294,7 +335,6 @@
                  resultText += `\n(Figyelem: Ezt a különbséget a D'Hondt-módszernek elvileg ki kellene osztania.)`;
             }
             
-            // Hozzáadjuk a kiesett pártokat is az infó teljességéért
             parties.forEach(party => {
                 if (party.percentage < party.threshold) {
                     resultText += `\n${party.name} (${party.percentage}%) kiesett (küszöb: ${party.threshold}%)`;
@@ -304,15 +344,11 @@
             return resultText;
         }
 
-        // Kezdeti 2 párt hozzáadása
         addPartyInput();
         addPartyInput();
-
-        addPartyBtn.addEventListener('click', addPartyInput);
-
+        addPartyBtn.addEventListener('click', () => addPartyInput()); 
         totalMandatesInput.addEventListener('input', validatePositiveNumber);
 
-        // Számolás gomb eseménykezelője
         calculateBtn.addEventListener('click', () => {
             const parties = [];
             let totalPercentage = 0;
@@ -323,27 +359,26 @@
                 const percentage = parseInt(group.querySelector('.party-percentage').value);
                 let threshold = parseInt(group.querySelector('.party-threshold').value);
 
-                // Ha nincs megadva küszöb, legyen 0
                 if (isNaN(threshold) || threshold < 0) {
                     threshold = 0;
                 }
 
-                // VALIDÁCIÓK
-                if (name === '') {
-                    alert("Kérlek add meg minden párt nevét!");
+                if (name === '' && (percentage > 0 || threshold > 0)) {
+                    alert("Kérlek add meg a párt nevét, ha szavazatokat vagy küszöböt adtál meg!");
                     isValid = false;
                     return;
                 }
                 
-                if (isNaN(percentage) || !Number.isInteger(percentage) || percentage < 0) {
-                    // Itt már a validatePercentage is dolgozott, de a végső ellenőrzés is kell
+                if (name !== '' && (isNaN(percentage) || !Number.isInteger(percentage) || percentage < 0)) {
                     alert(`Hiba a(z) "${name}" pártnál: A százalék csak egész, pozitív szám lehet!`);
                     isValid = false;
                     return;
                 }
-
-                parties.push({ name, percentage, threshold });
-                totalPercentage += percentage;
+                
+                if (name !== '' || percentage > 0) {
+                     parties.push({ name, percentage, threshold });
+                     totalPercentage += percentage;
+                }
             });
 
             const totalMandates = parseInt(totalMandatesInput.value);
