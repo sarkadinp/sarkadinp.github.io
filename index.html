@@ -134,4 +134,235 @@
                 align-items: stretch;
             }
             .total-mandates-group {
-                margin-
+                margin-top: 20px;
+                margin-left: 0;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Testreszabható Mandátum Kalkulátor</h1>
+
+        <div class="party-header">
+            <div>Párt/lista</div>
+            <div style="text-align: right;">%</div>
+            <div style="text-align: right;">bejutási küszöb (%)</div>
+        </div>
+
+        <div id="partiesContainer">
+            </div>
+
+        <div class="controls">
+            <button id="addPartyBtn">Párt hozzáadása</button>
+            <div class="total-mandates-group">
+                <label for="totalMandates">Összes mandátum:</label>
+                <input type="number" id="totalMandates" value="120" min="1">
+            </div>
+        </div>
+
+        <div class="calculate-button-container">
+            <button id="calculateBtn">Számolás indítása</button>
+        </div>
+    </div>
+
+    <script>
+        const partiesContainer = document.getElementById('partiesContainer');
+        const addPartyBtn = document.getElementById('addPartyBtn');
+        const totalMandatesInput = document.getElementById('totalMandates');
+        const calculateBtn = document.getElementById('calculateBtn');
+        let partyCount = 0;
+        const MAX_PARTIES = 10;
+
+        function addPartyInput(partyName = '', percentage = '', threshold = '') {
+            if (partyCount >= MAX_PARTIES) {
+                addPartyBtn.disabled = true;
+                return;
+            }
+
+            partyCount++;
+            const partyGroup = document.createElement('div');
+            partyGroup.classList.add('party-input-group');
+            partyGroup.dataset.partyId = partyCount;
+
+            // --- KORRIGÁLT PLACEHOLDER ÉS KÜSZÖB MEZŐ MÉRET ---
+            partyGroup.innerHTML = `
+                <input type="text" class="party-name" placeholder="Párt neve" value="${partyName}">
+                <input type="number" class="party-percentage" placeholder="%" value="${percentage}" min="0">
+                <input type="number" class="party-threshold" placeholder="(0-100)" value="${threshold}" min="0">
+            `;
+            partiesContainer.appendChild(partyGroup);
+            
+            // Kijavított CSS: a .party-input-group grid-template-columns szabályozza a méretet
+
+            if (partyCount >= MAX_PARTIES) {
+                addPartyBtn.disabled = true;
+            }
+
+            // Input validáció hozzáadása dinamikusan
+            const percentageInput = partyGroup.querySelector('.party-percentage');
+            const thresholdInput = partyGroup.querySelector('.party-threshold');
+            
+            percentageInput.addEventListener('input', validatePercentage);
+            thresholdInput.addEventListener('input', validatePositiveNumber);
+        }
+
+        function validatePercentage(event) {
+            let value = event.target.value;
+            if (value === '') return;
+            
+            // Csak egész szám
+            if (!Number.isInteger(Number(value))) {
+                alert("Csak egész számokat használj!");
+                event.target.value = Math.floor(Number(value)); 
+            } 
+            // Csak pozitív szám
+            if (Number(value) < 0) {
+                alert("Hiba! Kérlek csak pozitív számot használj!");
+                event.target.value = ''; 
+            }
+        }
+
+        function validatePositiveNumber(event) {
+            let value = event.target.value;
+            if (value === '') return;
+
+            if (Number(value) < 0) {
+                alert("Hiba! Kérlek csak pozitív számot használj!");
+                event.target.value = '';
+            }
+        }
+        
+        // --- D'HONDT MANDÁTUM KALKULÁCIÓ ---
+        function calculateMandates(parties, totalMandates) {
+            
+            let passedParties = [];
+            let totalPassedPercentage = 0;
+
+            // 1. Bejutási Küszöb Szűrés
+            parties.forEach(party => {
+                if (party.percentage >= party.threshold) {
+                    passedParties.push(party);
+                    totalPassedPercentage += party.percentage;
+                }
+            });
+
+            if (passedParties.length === 0) {
+                return "Egyetlen párt sem érte el a bejutási küszöböt. Nincs kiosztandó mandátum.";
+            }
+
+            // Normalizált százalékok kiszámítása:
+            passedParties = passedParties.map(party => ({
+                name: party.name,
+                // Normalizált szavazatarány
+                normalizedPercentage: (party.percentage / totalPassedPercentage) * 100,
+                mandates: 0
+            }));
+
+            // 2. D'Hondt Módszer
+            for (let i = 0; i < totalMandates; i++) {
+                let maxQuotient = -1;
+                let winningPartyIndex = -1;
+
+                passedParties.forEach((party, index) => {
+                    // D'Hondt képlet: Kvóciens = Normalizált Szavazatok / (Kiosztott mandátumok + 1)
+                    const quotient = party.normalizedPercentage / (party.mandates + 1);
+                    
+                    if (quotient > maxQuotient) {
+                        maxQuotient = quotient;
+                        winningPartyIndex = index;
+                    }
+                });
+
+                if (winningPartyIndex !== -1) {
+                    passedParties[winningPartyIndex].mandates++;
+                }
+            }
+            
+            // 3. Eredmény formázása
+            let resultText = `✅ Sikeres mandátumelosztás (D'Hondt-módszer):\n\n`;
+            let totalSeatsAssigned = 0;
+            
+            passedParties.forEach(party => {
+                resultText += `${party.name}: ${party.mandates} mandátum\n`;
+                totalSeatsAssigned += party.mandates;
+            });
+
+            resultText += `\nÖsszes kiosztott mandátum: ${totalSeatsAssigned} / ${totalMandates}`;
+            if (totalSeatsAssigned < totalMandates) {
+                 resultText += `\n(Figyelem: Ezt a különbséget a D'Hondt-módszernek elvileg ki kellene osztania.)`;
+            }
+            
+            // Hozzáadjuk a kiesett pártokat is az infó teljességéért
+            parties.forEach(party => {
+                if (party.percentage < party.threshold) {
+                    resultText += `\n${party.name} (${party.percentage}%) kiesett (küszöb: ${party.threshold}%)`;
+                }
+            });
+
+            return resultText;
+        }
+
+        // Kezdeti 2 párt hozzáadása
+        addPartyInput();
+        addPartyInput();
+
+        addPartyBtn.addEventListener('click', addPartyInput);
+
+        totalMandatesInput.addEventListener('input', validatePositiveNumber);
+
+        // Számolás gomb eseménykezelője
+        calculateBtn.addEventListener('click', () => {
+            const parties = [];
+            let totalPercentage = 0;
+            let isValid = true;
+
+            document.querySelectorAll('.party-input-group').forEach(group => {
+                const name = group.querySelector('.party-name').value.trim();
+                const percentage = parseInt(group.querySelector('.party-percentage').value);
+                let threshold = parseInt(group.querySelector('.party-threshold').value);
+
+                // Ha nincs megadva küszöb, legyen 0
+                if (isNaN(threshold) || threshold < 0) {
+                    threshold = 0;
+                }
+
+                // VALIDÁCIÓK
+                if (name === '') {
+                    alert("Kérlek add meg minden párt nevét!");
+                    isValid = false;
+                    return;
+                }
+                
+                if (isNaN(percentage) || !Number.isInteger(percentage) || percentage < 0) {
+                    // Itt már a validatePercentage is dolgozott, de a végső ellenőrzés is kell
+                    alert(`Hiba a(z) "${name}" pártnál: A százalék csak egész, pozitív szám lehet!`);
+                    isValid = false;
+                    return;
+                }
+
+                parties.push({ name, percentage, threshold });
+                totalPercentage += percentage;
+            });
+
+            const totalMandates = parseInt(totalMandatesInput.value);
+            if (isNaN(totalMandates) || totalMandates <= 0) {
+                alert("Hiba! Kérlek érvényes, pozitív számot adj meg az összes mandátumnál!");
+                isValid = false;
+            }
+
+            if (totalPercentage > 100) {
+                alert(`A pártok összes százaléka (${totalPercentage}%) nem haladhatja meg a 100-at!`);
+                isValid = false;
+            }
+
+            if (isValid) {
+                const result = calculateMandates(parties, totalMandates);
+                alert(result);
+                console.log("Kalkuláció eredménye:\n", result);
+            }
+        });
+    </script>
+</body>
+</html>
